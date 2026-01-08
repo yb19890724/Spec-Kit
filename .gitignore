@@ -1,0 +1,29 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Dependencies
+node_modules/
+vendor/
+
+# Environment & secrets
+.env
+.env.*
+
+# Logs & caches
+*.log
+npm-debug.log*
+yarn-error.log*
+phpunit.xml
+.phpunit.result.cache
+.cache/
+coverage/
+
+# Builds
+build/
+dist/
+

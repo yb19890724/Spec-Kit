@@ -1,82 +1,64 @@
 ---
-description: Create or update the project constitution from interactive or provided principle inputs, ensuring all dependent templates stay in sync.
-handoffs: 
-  - label: Build Specification
-    agent: speckit.specify
-    prompt: Implement the feature specification based on the updated constitution. I want to build...
+description: 根据交互式或提供的原则输入创建或更新项目章程，确保所有相关的模板保持同步。
+handoffs:
+   - label: 构建规格
+     agent: speckit.specify
+     prompt: 基于更新后的章程实施功能规格说明。我想构建...
 ---
-
-## User Input
+## 用户输入
 
 ```text
 $ARGUMENTS
 ```
 
-You **MUST** consider the user input before proceeding (if not empty).
+在继续之前，您**必须**考虑用户输入（如果不为空）。
 
-## Outline
+## 概述
 
-You are updating the project constitution at `.specify/memory/constitution.md`. This file is a TEMPLATE containing placeholder tokens in square brackets (e.g. `[PROJECT_NAME]`, `[PRINCIPLE_1_NAME]`). Your job is to (a) collect/derive concrete values, (b) fill the template precisely, and (c) propagate any amendments across dependent artifacts.
+1. **读取状态文件：**检查`conductor/setup_state.json`是否存在。
+   - 如果它不存在，则这是一个新的项目设置。直接进行到步骤1.2。
+   - 如果它存在，则读取其内容。
+   
+2. **基于状态的恢复：**
+   - 将JSON文件中的`last_successful_step`的值设为`STEP`。
+   - 根据`STEP`的值，跳转到**下一个逻辑部分**：
 
-Follow this execution flow:
 
-1. Load the existing constitution template at `.specify/memory/constitution.md`.
-   - Identify every placeholder token of the form `[ALL_CAPS_IDENTIFIER]`.
-   **IMPORTANT**: The user might require less or more principles than the ones used in the template. If a number is specified, respect that - follow the general template. You will update the doc accordingly.
+- 如果`STEP`是“2.1_product_guide”，则宣布“继续设置：产品指南（`product.md`）已完成。接下来，我们将创建产品指南。”并继续进行**第2.2节**。
+- 如果`STEP`是“2.2_product_guidelines”，则宣布“继续设置：产品指南和产品指南已完成。接下来，我们将定义技术栈。”并继续执行**第2.3节**。
+- 如果`STEP`是“2.3_tech_stack”，则宣布“继续设置：产品指南、准则和技术栈已定义。接下来，我们将选择代码风格指南。”并继续进行**第2.4节**。
+- 如果`STEP`是“2.4_code_styleguides”，则宣布“继续设置：所有指南和技术栈均已配置。接下来，我们将定义项目工作流程。”并继续执行**第2.5节**。
+- 如果`STEP`为“2.5_workflow”，则宣布“恢复设置：初始项目脚手架已完成。接下来，我们将生成第一个任务。”并继续进行**第二阶段（3.0）**。
+- 如果`STEP`为“3.3_initial_track_generated”：
+   - 提示：“项目已初始化。您可以使用 `/speckit:newTrack` 创建新任务，或使用 `/speckit:implement` 开始实施现有任务。”
+   - 暂停`setup`进程。
+- 如果`STEP`未被识别，则报错并停止。
 
-2. Collect/derive values for placeholders:
-   - If user input (conversation) supplies a value, use it.
-   - Otherwise infer from existing repo context (README, docs, prior constitution versions if embedded).
-   - For governance dates: `RATIFICATION_DATE` is the original adoption date (if unknown ask or mark TODO), `LAST_AMENDED_DATE` is today if changes are made, otherwise keep previous.
-   - `CONSTITUTION_VERSION` must increment according to semantic versioning rules:
-     - MAJOR: Backward incompatible governance/principle removals or redefinitions.
-     - MINOR: New principle/section added or materially expanded guidance.
-     - PATCH: Clarifications, wording, typo fixes, non-semantic refinements.
-   - If version bump type ambiguous, propose reasoning before finalizing.
+## 1.2 预初始化概述
+1. **提供高级概述：**
+   - 向用户展示初始化过程的以下概览：
+     “欢迎来到 Conductor。我将指导您完成以下步骤以设置您的项目：
+     > 1. **项目发现**：分析当前目录，以确定这是一个新项目还是现有项目。
+     > 2. **产品定义**：共同确定产品的愿景、设计准则和技术栈。
+     > 3. **配置：**选择合适的代码风格指南，并定制你的开发工作流程。
+     > 4. **任务生成**：定义初始的**任务**（如特性开发或bug修复等高级工作单元），并自动生成详细计划以开始开发。
+     >
+     “我们开始吧！”
 
-3. Draft the updated constitution content:
-   - Replace every placeholder with concrete text (no bracketed tokens left except intentionally retained template slots that the project has chosen not to define yet—explicitly justify any left).
-   - Preserve heading hierarchy and comments can be removed once replaced unless they still add clarifying guidance.
-   - Ensure each Principle section: succinct name line, paragraph (or bullet list) capturing non‑negotiable rules, explicit rationale if not obvious.
-   - Ensure Governance section lists amendment procedure, versioning policy, and compliance review expectations.
+---
 
-4. Consistency propagation checklist (convert prior checklist into active validations):
-   - Read `.specify/templates/plan-template.md` and ensure any "Constitution Check" or rules align with updated principles.
-   - Read `.specify/templates/spec-template.md` for scope/requirements alignment—update if constitution adds/removes mandatory sections or constraints.
-   - Read `.specify/templates/tasks-template.md` and ensure task categorization reflects new or removed principle-driven task types (e.g., observability, versioning, testing discipline).
-   - Read each command file in `.specify/templates/commands/*.md` (including this one) to verify no outdated references (agent-specific names like CLAUDE only) remain when generic guidance is required.
-   - Read any runtime guidance docs (e.g., `README.md`, `docs/quickstart.md`, or agent-specific guidance files if present). Update references to principles changed.
+## 2.0 第一阶段：简化项目设置
+**协议：按照以下顺序与用户进行引导式交互设置。**
 
-5. Produce a Sync Impact Report (prepend as an HTML comment at top of the constitution file after update):
-   - Version change: old → new
-   - List of modified principles (old title → new title if renamed)
-   - Added sections
-   - Removed sections
-   - Templates requiring updates (✅ updated / ⚠ pending) with file paths
-   - Follow-up TODOs if any placeholders intentionally deferred.
 
-6. Validation before final output:
-   - No remaining unexplained bracket tokens.
-   - Version line matches report.
-   - Dates ISO format YYYY-MM-DD.
-   - Principles are declarative, testable, and free of vague language ("should" → replace with MUST/SHOULD rationale where appropriate).
-
-7. Write the completed constitution back to `.specify/memory/constitution.md` (overwrite).
-
-8. Output a final summary to the user with:
-   - New version and bump rationale.
-   - Any files flagged for manual follow-up.
-   - Suggested commit message (e.g., `docs: amend constitution to vX.Y.Z (principle additions + governance update)`).
-
-Formatting & Style Requirements:
-
-- Use Markdown headings exactly as in the template (do not demote/promote levels).
-- Wrap long rationale lines to keep readability (<100 chars ideally) but do not hard enforce with awkward breaks.
-- Keep a single blank line between sections.
-- Avoid trailing whitespace.
-
-If the user supplies partial updates (e.g., only one principle revision), still perform validation and version decision steps.
-
-If critical info missing (e.g., ratification date truly unknown), insert `TODO(<FIELD_NAME>): explanation` and include in the Sync Impact Report under deferred items.
-
-Do not create a new template; always operate on the existing `.specify/memory/constitution.md` file.
+### 2.0 项目启动
+1. **检测项目成熟度：**
+   **项目分类**：根据以下指标确定项目是“棕地项目”（现有项目）还是“绿地项目”（新项目）：
+   - **棕地指标：**
+      - 检查是否存在版本控制目录：`.git`、`.svn` 或 `.hg`。
+        如果存在`.git`目录，则执行`git status --porcelain`命令。如果输出内容非空，则将其归类为“棕地”（即脏仓库）。
+      - 检查依赖清单：`package.json`、`pom.xml`、`requirements.txt`、`go.mod`。
+      - 检查源代码目录：`src/`、`app/`、`lib/` 是否包含代码文件。
+        如果满足上述任一条件（版本控制目录、未更新的git仓库、依赖清单或源代码目录），则归类为**Brownfield**。
+   - **绿地条件：**
+     仅当未发现任何“棕地指标”，且当前目录为空或仅包含通用文档（例如，单个`README.md`文件）且不包含功能代码或依赖项时，才可归类为**绿地**。
